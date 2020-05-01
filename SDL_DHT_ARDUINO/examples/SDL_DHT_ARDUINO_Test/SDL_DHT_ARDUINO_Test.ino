@@ -2,21 +2,24 @@
 // Modified from code originally written by ladyada, public domain
 // Code re-written and re-named by Alex Dornback April 2020
 
-// REQUIRES the following Arduino libraries:
+// May require the following Arduino libraries:
 // - DHT Sensor Library: https://github.com/adafruit/DHT-sensor-library
 // - Adafruit Unified Sensor Lib: https://github.com/adafruit/Adafruit_Sensor
 
 #include "SDL_DHT_ARDUINO.h"
 
-#define serialSpeed 115200
-// I pulled this into a variable so that we can re-use it if needed throughout 
-//   the code and it is easier to change up here.
-
 #define SDLDHTA_DEBUG_FLAG true
 //  I have named this cryptically so that there should not be any name conflicts 
 //    with other libraries.  This is a boolean flag to show debug info when running.
 
-#define DHTPIN 3     // Digital pin connected to the DHT sensor
+//#define serialSpeed 115200
+#define serialSpeed 74880  
+// 74880 will also display internal diagnostic information if any issues occur
+
+// I pulled the serialSpeed into a variable so that we can re-use it if needed throughout 
+//   the code and it is easier to change up here.
+
+#define DHTPIN 13     // Digital pin connected to the DHT sensor
 // Feather HUZZAH ESP8266 note: use pins 3, 4, 5, 12, 13 or 14 --
 // Pin 15 can work but DHT must be disconnected during program upload.
 
@@ -42,7 +45,19 @@
 
 DHT dht(DHTPIN, DHTTYPE);
 
+/* Global variable LED_BUILTIN = GPIO 2
+ *    NodeMCU GPIO 2 (Blue LED on ESP8266 chip)
+ *    NodeMCU GPIO 16 (Red LED close to microUSB port)
+ */
 void setup() {
+  
+  pinMode(LED_BUILTIN, OUTPUT);
+  
+  if (serialSpeed == 74880) {
+    Serial.begin(115200);
+    Serial.println("Serial speed set to 74880 for debugging purposes.  Switch to that.");
+    Serial.end();
+  }
   Serial.begin(serialSpeed);
   
   if (SDLDHTA_DEBUG_FLAG) {
@@ -52,19 +67,24 @@ void setup() {
 	  Serial.println("Port Speed: " + String(serialSpeed));
 	  Serial.println("Last Upload:  " + String(__DATE__) + "\t" + String(__TIME__));
   }
-  
   Serial.println();
-  Serial.println("Status\tHumidity (%)\tTemperature (C)\t(F)\tHeatIndex (C)\t(F)");
+  
+  Serial.println("tempC\tTempF\tHumidity\tDewpt\tHeatIdxC\tHeadIdxF\tHumiIdx");
+  Serial.println("(°c)\t(°F)\t(%)\t(°F)\t(°c)\t(°F)\t(%)");
 
   dht.begin();
 }
+
+float preTemp,preHumi = -1;
+float currTemp,currHumi = -2;
 
 void loop() {
   // Wait a few seconds between measurements.
   delay(2000);
   
   float dht_humi,dht_tempc,dht_tempf,dht_dewpt,dht_heatidxc,dht_heatidxf,dht_humiidxc,dht_humiidxf = -1;
-
+  digitalWrite(LED_BUILTIN, LOW);   // Turn the LED on by making the voltage LOW
+  
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   dht_humi = dht.readHumidity();
@@ -79,35 +99,62 @@ void loop() {
     return;
   }
 
-  dht_dewpt = dht.computeDewPoint(dht_tempc, dht_humi);  // temp humi isFahrenheit
+  currTemp = dht_tempc;
+  currHumi = dht_humi;
+  if (currTemp != preTemp | currHumi != preHumi) {
+    preTemp = currTemp;
+    preHumi = currHumi;
+    
+      dht_dewpt = dht.computeDewpoint(dht_tempf, dht_humi);  // temp humi isFahrenheit
+    
+      // Compute heat index in Fahrenheit (the default)
+      // dht_heatidx = heatIndex(Fahrenheit(dht_temp), dht_humi);
+      dht_heatidxf = dht.computeHeatIndex(dht_tempf, dht_humi);  //  temp, humi, isFahrenheit
+      // Compute heat index in Celsius (isFahrenheit = false)
+      dht_heatidxc = dht.computeHeatIndex(dht_tempc, dht_humi, false);
+    
+      dht_humiidxc = dht.computeHumiIndex(dht_tempc, dht_dewpt, false);  // temp dewpoint isFahrenheit //  !! NMF
+      dht_humiidxf = dht.computeHumiIndex(dht_tempf, dht_dewpt); // NMF
 
-  // Compute heat index in Fahrenheit (the default)
-  // dht_heatidx = heatIndex(Fahrenheit(dht_temp), dht_humi);
-  dht_heatidxf = dht.computeHeatIndex(dht_tempf, dht_humi);  //  temp, humi, isFahrenheit
-  // Compute heat index in Celsius (isFahrenheit = false)
-  dht_heatidxc = dht.computeHeatIndex(dht_tempc, dht_humi, false);
+      Serial.print(dht_tempc,0);
+      Serial.print("\t");
+      Serial.print(dht_tempf,0);
+      Serial.print("\t");
+      Serial.print(dht_humi,0);
+      Serial.print("\t");
+      Serial.print(dht_dewpt,0);
+      Serial.print("\t");
+      Serial.print(dht_heatidxc,0);
+      Serial.print("\t");
+      Serial.print(dht_heatidxf,0);
+      Serial.print("\t");
+      Serial.print(dht_humiidxc,0);
+      
+  /*  Readings with degrees %    
+      Serial.print(dht_tempc,0);
+      Serial.print(F("°C \t"));  
+      //Serial.print(F("°C  "));  
+      //  Used a few spaces for arrangement.  Probably not the most 'proper' way to do this.  Tabbing made it look ugly in the Serial Monitor
+      Serial.print(dht_tempf,0);
+      Serial.print(F("°F \t"));
+      Serial.print(dht_humi,0);
+      Serial.print(F("% \t"));
+      Serial.print(dht_dewpt,0);
+      Serial.print(F("°F \t"));
+      Serial.print(dht_heatidxc,0);
+      Serial.print(F("°C \t"));
+      //Serial.print(F("°C  "));
+      //  Used a few spaces for arrangement.  Probably not the most 'proper' way to do this.  Tabbing made it look ugly in the Serial Monitor
+      Serial.print(dht_heatidxf,0);
+      Serial.print(F("°F \t"));
+      Serial.print(dht_humiidxc,0);
+//      Serial.print(F("%"));
+*/      
+      Serial.println();
+  }
+  //delay(1000);                      // Wait for a second
+  digitalWrite(LED_BUILTIN, HIGH);  // Turn the LED off by making the voltage HIGH
 
-  dht_humiidxc = dht.computeHumiIndex(dht_tempc, dht_dewpt, false);  // temp dewpoint isFahrenheit
-  dht_humiidxf = dht.computeHumiIndex(dht_tempf, dht_dewpt);
-
-
-  Serial.print(F("Humidity: "));
-  Serial.print(dht_humi);
-  Serial.print(F("%  Temperature: "));
-  Serial.print(dht_tempc);
-  Serial.print(F("°C "));
-  Serial.print(dht_tempf);
-  Serial.print(F("°F  Dew Point: "));
-  Serial.print(dht_dewpt);
-  Serial.print(F("  Heat index: "));
-  Serial.print(dht_heatidxc);
-  Serial.print(F("°C "));
-  Serial.print(dht_heatidxf);
-  Serial.print(F("°F  Humi index: "));
-  Serial.print(dht_humiidxc);
-  Serial.print(F("°C "));
-  Serial.print(dht_humiidxf);
-  Serial.print(F("°F"));
-  
-  Serial.println();
+  //  Wait 10 seconds before next reading  (10000 = 10 seconds.  1000 = 1 second)
+  delay(2000);
 }

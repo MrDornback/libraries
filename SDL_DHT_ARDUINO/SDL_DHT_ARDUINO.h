@@ -14,8 +14,8 @@
  *  MIT license, all text above must be included in any redistribution
  */
 
-#ifndef SDL_DHT_ARDUINO_H
-#define SDL_DHT_ARDUINO_H
+#ifndef DHT_H
+#define DHT_H
 
 #include "Arduino.h"
 
@@ -40,24 +40,25 @@
 #define DHT22 22 /**< DHT TYPE 22 */
 #define DHT21 21 /**< DHT TYPE 21 */
 #define AM2301 21 /**< AM2301 */
+#define SHT30 21 /**< SHT30 */
 
 /*! 
  *  @brief  Class that stores state and functions for DHT
  */
-class SDL_DHT_ARDUINO {
+class DHT {
   public:
-   SDL_DHT_ARDUINO(uint8_t pin, uint8_t type, uint8_t count=6);
+   DHT(uint8_t pin, uint8_t type, uint8_t count=6);
    void begin(uint8_t usec=55);
    float readTemperature(bool S=false, bool force=false);
    float readHumidity(bool force=false);
    float convertCtoF(float);
    float convertFtoC(float);
-   float computeDewpoint(float isFahrenheit=true);
+   float computeDewpoint(bool isFahrenheit=true);
    float computeDewpoint(float temperature, float percentHumidity, bool isFahrenheit=true);
    float computeHeatIndex(bool isFahrenheit=true);
    float computeHeatIndex(float temperature, float percentHumidity, bool isFahrenheit=true);
    float computeHumiIndex(bool isFahrenheit=true);
-   float computHumiIndex(float temperature, float dewpoint, bool isFahrenheit=true);
+   float computeHumiIndex(float temperature, float dewpoint, bool isFahrenheit=true);
    bool read(bool force=false);
 
  private:

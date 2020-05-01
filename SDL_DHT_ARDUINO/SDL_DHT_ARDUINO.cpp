@@ -39,7 +39,7 @@
  *  @param  count
  *          number of sensors
  */
-SDL_DHT_ARDUINO::SDL_DHT_ARDUINO(uint8_t pin, uint8_t type, uint8_t count) {
+DHT::DHT(uint8_t pin, uint8_t type, uint8_t count) {
   _pin = pin;
   _type = type;
 #ifdef __AVR
@@ -59,7 +59,7 @@ SDL_DHT_ARDUINO::SDL_DHT_ARDUINO(uint8_t pin, uint8_t type, uint8_t count) {
  *          Optionally pass pull-up time (in microseconds) before DHT reading
  *starts. Default is 55 (see function declaration in DHT.h).
  */
-void SDL_DHT_ARDUINO::begin(uint8_t usec) {
+void DHT::begin(uint8_t usec) {
   // set up the pins!
   pinMode(_pin, INPUT_PULLUP);
   // Using this value makes sure that millis() - lastreadtime will be
@@ -81,7 +81,7 @@ void SDL_DHT_ARDUINO::begin(uint8_t usec) {
  *          true if in force mode
  *	@return Temperature value in selected scale
  */
-float SDL_DHT_ARDUINO::readTemperature(bool S, bool force) {
+float DHT::readTemperature(bool S, bool force) {
   float f = NAN;
 
   if (read(force)) {
@@ -128,7 +128,7 @@ float SDL_DHT_ARDUINO::readTemperature(bool S, bool force) {
  *					value in Celcius
  *	@return float value in Fahrenheit
  */
-float SDL_DHT_ARDUINO::convertCtoF(float c) { return c * 1.8 + 32; }
+float DHT::convertCtoF(float c) { return c * 1.8 + 32; }
 
 /*!
  *  @brief  Converts Fahrenheit to Celcius
@@ -136,7 +136,7 @@ float SDL_DHT_ARDUINO::convertCtoF(float c) { return c * 1.8 + 32; }
  *					value in Fahrenheit
  *	@return float value in Celcius
  */
-float SDL_DHT_ARDUINO::convertFtoC(float f) { return (f - 32) * 0.55555; }
+float DHT::convertFtoC(float f) { return (f - 32) * 0.55555; }
 
 /*!
  *  @brief  Read Humidity
@@ -144,7 +144,7 @@ float SDL_DHT_ARDUINO::convertFtoC(float f) { return (f - 32) * 0.55555; }
  *					force read mode
  *	@return float value - humidity in percent
  */
-float SDL_DHT_ARDUINO::readHumidity(bool force) {
+float DHT::readHumidity(bool force) {
   float f = NAN;
   if (read(force)) {
     switch (_type) {
@@ -163,12 +163,12 @@ float SDL_DHT_ARDUINO::readHumidity(bool force) {
 }
 
 // Dewpoint function from NOAA.  reference: http://wahiduddin.net/calc/density_algorithms.htm
-float SDL_DHT_ARDUINO::computeDewpoint(bool isFahrenheit) {
+float DHT::computeDewpoint(bool isFahrenheit) {
 	float dp = computeDewpoint(readTemperature(isFahrenheit), readHumidity(), isFahrenheit);
 	return dp;
 }
 
-float SDL_DHT_ARDUINO::computeDewpoint(float temperature, float humidity, bool isFahrenheit) {
+float DHT::computeDewpoint(float temperature, float humidity, bool isFahrenheit) {
 	// Temperature.h dewPointFast()
     float a = 17.271;
     float b = 237.7;
@@ -177,14 +177,14 @@ float SDL_DHT_ARDUINO::computeDewpoint(float temperature, float humidity, bool i
     return Td;
 }
 
-float SDL_DHT_ARDUINO::computeHumiIndex(bool isFahrenheit) {
+float DHT::computeHumiIndex(bool isFahrenheit) {
 	float temp = readTemperature(isFahrenheit);
 	float dewPt = computeDewpoint(temp, readHumidity(), isFahrenheit);
 	float hui = computeHumiIndex(temp, dewPt, isFahrenheit);
 	return hui;
 }
 
-float SDL_DHT_ARDUINO::computeHumiIndex(float temperature, float dewpoint, bool isFahrenheit) {
+float DHT::computeHumiIndex(float temperature, float dewpoint, bool isFahrenheit) {
 	//  http://www.ccacac.com/wp-content/uploads/2010/06/Humidex-Graph.pdf
 	float e = 19.833625 - 5417.753 /(273.16 + dewpoint);
     float hui = temperature + 3.3941 * exp(e) - 5.555;
@@ -199,11 +199,10 @@ float SDL_DHT_ARDUINO::computeHumiIndex(float temperature, float dewpoint, bool 
  *true)
  *	@return float heat index
  */
-float SDL_DHT_ARDUINO::computeHeatIndex(bool isFahrenheit) {
-  float hi = computeHeatIndex(readTemperature(isFahrenheit), readHumidity(),
-                              isFahrenheit);
+float DHT::computeHeatIndex(bool isFahrenheit) {
+  float hi = computeHeatIndex(readTemperature(isFahrenheit), readHumidity(), isFahrenheit);
   return hi;
-|}
+}
 
 /*!
  *  @brief  Compute Heat Index
@@ -217,7 +216,7 @@ float SDL_DHT_ARDUINO::computeHeatIndex(bool isFahrenheit) {
  * 					true if fahrenheit, false if celcius
  *	@return float heat index
  */
-float SDL_DHT_ARDUINO::computeHeatIndex(float temperature, float percentHumidity, bool isFahrenheit) {
+float DHT::computeHeatIndex(float temperature, float percentHumidity, bool isFahrenheit) {
   float hi;
 
   if (!isFahrenheit)
@@ -255,7 +254,7 @@ float SDL_DHT_ARDUINO::computeHeatIndex(float temperature, float percentHumidity
  *          true if using force mode
  *	@return float value
  */
-bool SDL_DHT_ARDUINO::read(bool force) {
+bool DHT::read(bool force) {
   // Check if sensor was read less than two seconds ago and return early
   // to use last reading.
   uint32_t currenttime = millis();
@@ -386,7 +385,7 @@ bool SDL_DHT_ARDUINO::read(bool force) {
 // This is adapted from Arduino's pulseInLong function (which is only available
 // in the very latest IDE versions):
 //   https://github.com/arduino/Arduino/blob/master/hardware/arduino/avr/cores/arduino/wiring_pulse.c
-uint32_t SDL_DHT_ARDUINO::expectPulse(bool level) {
+uint32_t DHT::expectPulse(bool level) {
 #if (F_CPU > 16000000L)
   uint32_t count = 0;
 #else
